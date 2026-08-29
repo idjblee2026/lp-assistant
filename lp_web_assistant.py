@@ -9,12 +9,6 @@ def load_data():
     with open("lp_database.json", "r", encoding="utf-8") as f:
         return json.load(f)
 
-def clean_text(text):
-    if not isinstance(text, str):
-        return text
-    # 취소선 방지: 물결표(~)를 대시(-)로 변경
-    return text.replace("~", "-")
-
 try:
     data = load_data()
     st.title("🎵 나만의 LP 서재 AI 음악 비서")
@@ -38,8 +32,8 @@ try:
             with st.expander(f"📍 [위치: {loc}] {artist} - {title}", expanded=True):
                 for k, v in item.items():
                     if v:
-                        clean_v = clean_text(str(v))
-                        st.markdown(f"**{k}**: {clean_v}")
+                        clean_v = str(v).replace("~", "-")
+                        st.text(f"{k}: {clean_v}")
     else:
         st.write(f"전체 등록된 LP: **{len(data)}**장")
         st.dataframe(data, use_container_width=True)
