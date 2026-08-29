@@ -17,17 +17,17 @@ try:
     if query:
         results = []
         
-        # 1. 숫자만 입력한 경우 (예: 104, 401): 해당 선반 위치의 LP만 정확히 검색
+        # 1. 숫자 검색 (선반 위치 번호)
         if query.isdigit():
             for item in data:
                 if str(item.get("location")) == str(int(query)):
                     results.append(item)
                     
-        # 2. 일반 텍스트 검색 (가수, 곡명 등) 또는 위치 번호 검색 결과가 없을 때
+        # 2. 일반 텍스트 검색
         if not results:
             for item in data:
-                search_scope = f"{item.get('album', '')} {item.get('artist', '')} {item.get('content', '')}"
-                if query.lower() in search_scope.lower():
+                text_all = f"{item.get('album', '')} {item.get('artist', '')} {item.get('content', '')} {item.get('full_text', '')} {item.get('raw_content', '')}"
+                if query.lower() in text_all.lower():
                     results.append(item)
         
         st.write(f"검색 결과: 총 **{len(results)}**건")
@@ -37,7 +37,9 @@ try:
                 loc = item.get("location", "-")
                 artist = item.get("artist", "아티스트 미상")
                 album = item.get("album", "앨범명 없음")
-                content = item.get("content", "")
+                
+                # 본문 해설 내용 찾아서 가져오기
+                content = item.get("full_text") or item.get("raw_content") or item.get("content") or "상세 정보가 없습니다."
                 
                 with st.expander(f"📍 [위치: {loc}번] {artist} - {album}", expanded=True):
                     st.markdown(f"### 📍 보관 위치: **{loc}번 선반**")
