@@ -5,7 +5,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 import urllib.parse
 import webbrowser
 
-INDEX_FILE = r"D:\LP_Agent\lp_database.json"
+INDEX_FILE = "lp_database.json"
 
 with open(INDEX_FILE, "r", encoding="utf-8") as f:
     database = json.load(f)
