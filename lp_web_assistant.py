@@ -1,5 +1,6 @@
 import streamlit as st
 import json
+import re
 
 st.set_page_config(page_title="나만의 LP 서재", page_icon="🎵", layout="wide")
 
@@ -7,6 +8,21 @@ st.set_page_config(page_title="나만의 LP 서재", page_icon="🎵", layout="w
 def load_data():
     with open("lp_database.json", "r", encoding="utf-8") as f:
         return json.load(f)
+
+def clean_text_display(text):
+    if not text:
+        return "상세 정보가 없습니다."
+    t = str(text)
+    # @0067, @105 등 골뱅이 번호 제거
+    t = re.sub(r'@[0-9]+', '', t)
+    # '번호 : 0067', '위치 : 105' 등 중복 문구 제거
+    t = re.sub(r'번호\s*:\s*@?\d*', '', t)
+    t = re.sub(r'위치\s*:\s*@?\d*', '', t)
+    # 글자에 줄 긋는 취소선(~) 기호 정리
+    t = t.replace("~", "-")
+    # 연속된 불필요한 공백/줄바꿈 정리
+    t = re.sub(r'\n\s*\n', '\n\n', t)
+    return t.strip()
 
 try:
     data = load_data()
@@ -38,8 +54,9 @@ try:
                 artist = item.get("artist", "아티스트 미상")
                 album = item.get("album", "앨범명 없음")
                 
-                # 본문 해설 내용 찾아서 가져오기
-                content = item.get("full_text") or item.get("raw_content") or item.get("content") or "상세 정보가 없습니다."
+                # 본문 해설 가져와서 기호 말끔히 제거
+                raw_text = item.get("full_text") or item.get("raw_content") or item.get("content") or ""
+                content = clean_text_display(raw_text)
                 
                 with st.expander(f"📍 [위치: {loc}번] {artist} - {album}", expanded=True):
                     st.markdown(f"### 📍 보관 위치: **{loc}번 선반**")
