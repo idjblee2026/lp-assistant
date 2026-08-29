@@ -1,8 +1,7 @@
 import streamlit as st
 import json
-import os
 
-st.set_page_config(page_title="나만의 LP 서재 AI 음악 비서", page_icon="🎵", layout="wide")
+st.set_page_config(page_title="나만의 LP 서재", page_icon="🎵", layout="wide")
 
 @st.cache_data
 def load_data():
@@ -11,32 +10,46 @@ def load_data():
 
 try:
     data = load_data()
-    st.title("🎵 나만의 LP 서재 AI 음악 비서")
+    st.title("🎵 나만의 LP 서재")
     
-    query = st.text_input("🔍 검색어를 입력하세요 (작곡가, 연주자, 앨범명, 곡명, 위치 등):", "")
+    query = st.text_input("🔍 검색 (선반 번호, 작곡가, 연주자, 앨범명, 곡명 등):", "").strip()
     
     if query:
         results = []
-        for item in data:
-            item_str = " ".join([str(v) for v in item.values() if v])
-            if query.lower() in item_str.lower():
-                results.append(item)
         
-        st.write(f"총 **{len(results)}**건이 검색되었습니다.")
+        # 1. 숫자만 입력한 경우 (예: 104, 401): 해당 선반 위치의 LP만 정확히 검색
+        if query.isdigit():
+            for item in data:
+                if str(item.get("location")) == str(int(query)):
+                    results.append(item)
+                    
+        # 2. 일반 텍스트 검색 (가수, 곡명 등) 또는 위치 번호 검색 결과가 없을 때
+        if not results:
+            for item in data:
+                search_scope = f"{item.get('album', '')} {item.get('artist', '')} {item.get('content', '')}"
+                if query.lower() in search_scope.lower():
+                    results.append(item)
         
-        for idx, item in enumerate(results):
-            title = item.get("album") or item.get("filename") or f"LP #{idx+1}"
-            loc = item.get("location", "위치 미지정")
-            artist = item.get("artist", "아티스트 미지정")
-            
-            with st.expander(f"📍 [위치: {loc}] {artist} - {title}", expanded=True):
-                for k, v in item.items():
-                    if v:
-                        clean_v = str(v).replace("~", "-")
-                        st.text(f"{k}: {clean_v}")
+        st.write(f"검색 결과: 총 **{len(results)}**건")
+        
+        if results:
+            for item in results:
+                loc = item.get("location", "-")
+                artist = item.get("artist", "아티스트 미상")
+                album = item.get("album", "앨범명 없음")
+                content = item.get("content", "")
+                
+                with st.expander(f"📍 [위치: {loc}번] {artist} - {album}", expanded=True):
+                    st.markdown(f"**보관 위치:** {loc}번 선반")
+                    st.markdown(f"**아티스트:** {artist}")
+                    st.markdown(f"**앨범명:** {album}")
+                    st.markdown("---")
+                    st.text_area("수록곡 및 상세 해설", content, height=260)
+        else:
+            st.info("검색 결과가 없습니다.")
     else:
-        st.write(f"전체 등록된 LP: **{len(data)}**장")
+        st.write(f"전체 소장 LP: **{len(data)}**장")
         st.dataframe(data, use_container_width=True)
 
 except Exception as e:
-    st.error(f"데이터를 불러오는 중 오류가 발생했습니다: {e}")
+    st.error(f"오류가 발생했습니다: {e}")
