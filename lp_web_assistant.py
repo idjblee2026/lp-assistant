@@ -40,11 +40,12 @@ try:
                 content = item.get("content", "")
                 
                 with st.expander(f"📍 [위치: {loc}번] {artist} - {album}", expanded=True):
-                    st.markdown(f"**보관 위치:** {loc}번 선반")
+                    st.markdown(f"### 📍 보관 위치: **{loc}번 선반**")
                     st.markdown(f"**아티스트:** {artist}")
                     st.markdown(f"**앨범명:** {album}")
                     st.markdown("---")
-                    st.text_area("수록곡 및 상세 해설", content, height=260)
+                    st.markdown("#### 🎼 수록곡 및 음반 해설")
+                    st.write(content)
         else:
             st.info("검색 결과가 없습니다.")
     else:
