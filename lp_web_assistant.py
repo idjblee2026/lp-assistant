@@ -38,15 +38,13 @@ def load_data():
 lp_data = load_data()
 
 # 검색창
-query = st.text_input("🔍 음반 제목, 아티스트, 또는 원하는 분위기를 검색하세요:", "")
+query = st.text_input("🔍 음반 제목, 아티스트, 번호(위치), 또는 분위기를 검색하세요:", "")
 
 if query:
+    q = query.lower().strip()
     filtered = [
         item for item in lp_data 
-        if query.lower() in str(item.get("title", "")).lower() 
-        or query.lower() in str(item.get("artist", "")).lower()
-        or query.lower() in str(item.get("intro", "")).lower()
-        or query.lower() in str(item.get("detail", "")).lower()
+        if any(q in str(val).lower() for val in item.values())
     ]
 else:
     filtered = lp_data
@@ -54,13 +52,13 @@ else:
 if filtered:
     st.write(f"총 **{len(filtered)}**개의 음반이 검색되었습니다.")
     for item in filtered:
-        loc = item.get("loc", item.get("위치", ""))
-        title = item.get("title", item.get("앨범명", ""))
-        artist = item.get("artist", item.get("아티스트", ""))
+        loc = item.get("loc", item.get("위치", item.get("연번", "")))
+        title = item.get("title", item.get("앨범명", item.get("타이틀", "")))
+        artist = item.get("artist", item.get("아티스트", item.get("가수", "")))
         genre = item.get("genre", item.get("장르", ""))
         year = item.get("year", item.get("발매년도", ""))
-        intro = item.get("intro", item.get("음반소개", ""))
-        detail = item.get("detail", item.get("해설", ""))
+        intro = item.get("intro", item.get("음반소개", item.get("추천사유", "")))
+        detail = item.get("detail", item.get("해설", item.get("내용", "")))
 
         st.markdown(f"""
         <div class="lp-card">
@@ -78,4 +76,4 @@ if filtered:
             safe_text = str(raw_text).replace("~", "～")
             st.write(safe_text)
 else:
-    st.info("검색된 음반이 없습니다. 다른 키워드나 테마를 선택해 보세요.")
+    st.info("검색된 음반이 없습니다. 다른 키워드나 번호를 입력해 보세요.")
