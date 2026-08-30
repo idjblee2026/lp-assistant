@@ -58,11 +58,23 @@ with col5:
 query = st.text_input("🔍 음반 제목, 아티스트, 번호(위치), 또는 분위기를 검색하세요:", value=st.session_state.search_query)
 
 if query:
-    q = query.lower().strip()
-    filtered = [
-        item for item in lp_data 
-        if any(q in str(val).lower() for val in item.values())
-    ]
+    # 자연어 문장에서 핵심 검색 키워드 추출 (2글자 이상 단어들)
+    clean_query = query.lower().strip()
+    words = [w for w in re.split(r'[\s,./?~!@#]+', clean_query) if len(w) >= 2]
+    
+    # 만약 @숫자 형식이면 그 번호 우선 검색
+    exact_loc_match = re.search(r'@?([0-9]+)', clean_query)
+    
+    filtered = []
+    for item in lp_data:
+        item_text = " ".join([str(v).lower() for v in item.values() if v is not None])
+        
+        # 1. 문장 전체가 포함된 경우
+        if clean_query in item_text:
+            filtered.append(item)
+        # 2. 문장의 핵심 단어들 중 하나라도 포함된 경우 (자연어 감성 검색)
+        elif words and any(w in item_text for w in words):
+            filtered.append(item)
 else:
     filtered = lp_data
 
@@ -71,7 +83,7 @@ if filtered:
     for item in filtered:
         full_text = " ".join([str(v) for v in item.values() if v is not None])
 
-        # 1. 위치 번호 숫자만 깔끔하게 추출 (예: 108)
+        # 위치 번호 추출
         loc = ""
         loc_match = re.search(r'위치\s*[:_]?\s*@?([0-9]+)', full_text)
         if loc_match:
@@ -84,7 +96,7 @@ if filtered:
                         loc = m.group(1)
                         break
 
-        # 2. 가수 및 앨범명 추출
+        # 가수 및 앨범명 추출
         artist = ""
         title = ""
         for k, v in item.items():
@@ -94,7 +106,6 @@ if filtered:
             elif any(x in k_s for x in ["앨범", "title", "제목", "음반명"]) and v:
                 title = str(v).strip()
 
-        # 데이터가 통문장으로 뭉쳐있을 경우 정제
         if not artist:
             for v in item.values():
                 val_s = str(v).strip()
@@ -102,15 +113,11 @@ if filtered:
                     artist = val_s
                     break
 
-        # 3. 앨범명에서 불필요한 번호 제거
         if title.startswith("@") or title == loc or title == f"@{loc}":
             title = ""
 
-        # 4. 해설 본문 및 요약 추천글 분리
-        # 가장 긴 텍스트를 원문으로 사용
+        # 해설 본문 및 요약 추천글 분리
         raw_detail = max([str(v) for v in item.values() if v is not None], key=len, default="")
-        
-        # '• 음반 소개:' 이후의 실제 설명 문장만 추출
         intro_clean = ""
         if "• 음반 소개:" in raw_detail:
             parts = raw_detail.split("• 음반 소개:")
@@ -121,10 +128,8 @@ if filtered:
         else:
             intro_clean = re.sub(r'^(LP_.*?\n|.*?위치\s*:.*?\n|.*?발매년도\s*:.*?\n)+', '', raw_detail).strip()
 
-        # 상단 추천글은 PC처럼 150자 내외로 깔끔하게 요약 표시
         ai_summary = intro_clean[:160] + "..." if len(intro_clean) > 160 else intro_clean
 
-        # 헤더 조립
         header_text = f"<span class='loc-tag'>[위치: @{loc}]</span> " if loc else ""
         header_text += artist
         if title:
