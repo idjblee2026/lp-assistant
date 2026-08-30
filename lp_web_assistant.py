@@ -10,41 +10,70 @@ st.markdown("""
     .main { background-color: #f8fafc; }
     .lp-card {
         background-color: #ffffff;
-        border-radius: 12px;
-        padding: 22px 24px;
-        margin-bottom: 20px;
-        border-left: 8px solid #2563eb;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border-radius: 14px;
+        padding: 26px 28px;
+        margin-bottom: 24px;
+        border-left: 10px solid #2563eb;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.07);
     }
-    /* 제목 및 위치 번호 글자 크기 확대 */
-    .lp-loc { font-size: 22px; font-weight: bold; color: #1e293b; line-height: 1.4; }
-    .lp-loc span.loc-tag { color: #dc2626; font-size: 22px; }
-    .lp-meta { font-size: 16px; color: #64748b; margin: 6px 0 14px 0; }
     
-    /* AI 추천 해설 글자 크기 및 줄간격 대폭 확대 */
+    /* 1. 제목 및 위치 번호 (시원하게 대형 확대) */
+    .lp-loc { 
+        font-size: 26px !important; 
+        font-weight: 800 !important; 
+        color: #0f172a !important; 
+        line-height: 1.4 !important; 
+    }
+    .lp-loc span.loc-tag { 
+        color: #dc2626 !important; 
+        font-size: 26px !important; 
+        font-weight: 800 !important; 
+    }
+    
+    /* 2. 부가 정보 */
+    .lp-meta { 
+        font-size: 19px !important; 
+        color: #475569 !important; 
+        margin: 8px 0 16px 0 !important; 
+    }
+    
+    /* 3. AI 추천 해설 박스 및 글자 (노안/아이패드 맞춤 초대형 글씨) */
     .lp-ai-box { 
-        background-color: #f1f5f9; 
-        border-radius: 10px; 
-        padding: 16px 18px; 
-        margin-top: 10px; 
-        font-size: 18.5px; 
-        color: #1e293b; 
-        line-height: 1.75; 
-        word-break: keep-all;
+        background-color: #f1f5f9 !important; 
+        border-radius: 12px !important; 
+        padding: 22px 24px !important; 
+        margin-top: 14px !important; 
+        font-size: 23px !important; 
+        font-weight: 500 !important; 
+        color: #0f172a !important; 
+        line-height: 1.85 !important; 
+        word-break: keep-all !important;
+        letter-spacing: -0.3px !important;
+    }
+    .lp-ai-box b {
+        font-size: 24px !important;
+        color: #1e3a8a !important;
     }
     
-    /* 해설 원본 열기(접기/펼치기) 내부 글자 크기 확대 */
-    [data-testid="stExpander"] {
-        font-size: 18px !important;
+    /* 4. 해설 원본 열기 제목 버튼 */
+    [data-testid="stExpander"] details summary span {
+        font-size: 23px !important;
+        font-weight: 700 !important;
+        color: #1e40af !important;
+        padding: 6px 0 !important;
     }
+    
+    /* 5. 해설 원본 본문 글자 (초대형 및 높은 가독성) */
     .expander-content {
-        font-size: 18px !important;
-        line-height: 1.8 !important;
-        color: #1e293b !important;
-        background-color: #fdfdfd;
-        padding: 12px;
-        border-radius: 8px;
-        word-break: keep-all;
+        font-size: 23px !important;
+        line-height: 1.9 !important;
+        color: #0f172a !important;
+        background-color: #ffffff !important;
+        padding: 20px !important;
+        border-radius: 10px !important;
+        border: 1px solid #e2e8f0 !important;
+        word-break: keep-all !important;
+        letter-spacing: -0.3px !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -115,7 +144,7 @@ if filtered:
                         loc = m.group(1)
                         break
 
-        # 2. 텍스트 추출
+        # 2. 항목별 텍스트 추출
         artist = ""
         title = ""
         for k, v in item.items():
