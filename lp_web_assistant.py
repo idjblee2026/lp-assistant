@@ -89,7 +89,7 @@ if filtered:
                         loc = m.group(1)
                         break
 
-        # 가수 및 앨범명 추출
+        # 아티스트 및 앨범명 추출
         artist = ""
         title = ""
         for k, v in item.items():
@@ -111,7 +111,7 @@ if filtered:
         else:
             intro_clean = re.sub(r'^(LP_.*?\n|.*?위치\s*:.*?\n|.*?발매년도\s*:.*?\n)+', '', raw_detail).strip()
 
-        # 앨범명이 비어있을 경우 해설 본문 속 《앨범명》 또는 <앨범명> 추출
+        # 앨범명이 누락된 경우 본문 속 《앨범명》 자동 탐색
         if not title or title.startswith("@") or title == loc:
             title_match = re.search(r'[《<](.*?)[》>]', intro_clean)
             if title_match:
@@ -119,7 +119,7 @@ if filtered:
 
         ai_summary = intro_clean[:160] + "..." if len(intro_clean) > 160 else intro_clean
 
-        # [위치: @번호] 다음에 앨범명이 먼저 나오도록 구성
+        # [위치: @번호] 다음에 앨범명을 1순위로 표시
         header_text = f"<span class='loc-tag'>[위치: @{loc}]</span> " if loc else ""
         if title:
             header_text += f"<b>{title}</b>"
