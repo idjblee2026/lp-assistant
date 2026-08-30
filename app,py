@@ -1,8 +1,9 @@
 import streamlit as st
 import json
 import os
+import re
 
-st.set_page_config(page_title="LP 감성 음악비서", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="나만의 LP 서재 AI 음악 비서", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
 <style>
@@ -10,23 +11,20 @@ st.markdown("""
     .lp-card {
         background-color: #ffffff;
         border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 12px;
-        border-left: 5px solid #2563eb;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        padding: 18px 20px;
+        margin-bottom: 16px;
+        border-left: 6px solid #2563eb;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.04);
     }
-    .lp-loc { font-size: 16px; font-weight: bold; color: #dc2626; }
-    .lp-title { font-size: 18px; font-weight: bold; color: #1e293b; }
-    .lp-meta { font-size: 13px; color: #64748b; margin: 4px 0 8px 0; }
-    .lp-desc { font-size: 14px; color: #334155; line-height: 1.6; }
-    .lp-ai-box { background-color: #f1f5f9; border-radius: 8px; padding: 10px; margin-top: 8px; font-size: 13.5px; color: #1e293b; }
+    .lp-loc { font-size: 17px; font-weight: bold; color: #1e293b; }
+    .lp-loc span.loc-tag { color: #dc2626; }
+    .lp-meta { font-size: 13px; color: #64748b; margin: 4px 0 10px 0; }
+    .lp-ai-box { background-color: #f8fafc; border-radius: 8px; padding: 12px; margin-top: 8px; font-size: 13.5px; color: #334155; line-height: 1.6; }
 </style>
 """, unsafe_allow_html=True)
 
-st.title("📻 LP 감성 음악비서 (Mobile/Web)")
-st.caption("소장 LP 서재 & 자연어 감성 추천기")
+st.title("📀 나만의 LP 서재 AI 음악 비서")
 
-# 데이터 로드 함수
 @st.cache_data
 def load_data():
     json_path = os.path.join(os.path.dirname(__file__), "lp_database.json")
@@ -37,45 +35,113 @@ def load_data():
 
 lp_data = load_data()
 
-# 검색창
-query = st.text_input("🔍 음반 제목, 아티스트, 또는 원하는 분위기를 검색하세요:", "")
+if "search_query" not in st.session_state:
+    st.session_state.search_query = ""
+
+col1, col2, col3, col4, col5 = st.columns(5)
+with col1:
+    if st.button("🟠 아침 서정적 클래식"):
+        st.session_state.search_query = "클래식"
+with col2:
+    if st.button("🟣 비 오는 날 감성 보컬"):
+        st.session_state.search_query = "보컬"
+with col3:
+    if st.button("🍃 밤 피아노"):
+        st.session_state.search_query = "피아노"
+with col4:
+    if st.button("🎷 모타운 레이블"):
+        st.session_state.search_query = "모타운"
+with col5:
+    if st.button("🎸 80년대 팝"):
+        st.session_state.search_query = "80년대"
+
+query = st.text_input("🔍 음반 제목, 아티스트, 번호(위치), 또는 분위기를 검색하세요:", value=st.session_state.search_query)
 
 if query:
-    filtered = [
-        item for item in lp_data 
-        if query.lower() in str(item.get("title", "")).lower() 
-        or query.lower() in str(item.get("artist", "")).lower()
-        or query.lower() in str(item.get("intro", "")).lower()
-        or query.lower() in str(item.get("detail", "")).lower()
-    ]
+    clean_query = query.lower().strip()
+    words = [w for w in re.split(r'[\s,./?~!@#]+', clean_query) if len(w) >= 2]
+    
+    filtered = []
+    for item in lp_data:
+        item_text = " ".join([str(v).lower() for v in item.values() if v is not None])
+        if clean_query in item_text:
+            filtered.append(item)
+        elif words and any(w in item_text for w in words):
+            filtered.append(item)
 else:
     filtered = lp_data
 
 if filtered:
     st.write(f"총 **{len(filtered)}**개의 음반이 검색되었습니다.")
     for item in filtered:
-        loc = item.get("loc", item.get("위치", ""))
-        title = item.get("title", item.get("앨범명", ""))
-        artist = item.get("artist", item.get("아티스트", ""))
-        genre = item.get("genre", item.get("장르", ""))
-        year = item.get("year", item.get("발매년도", ""))
-        intro = item.get("intro", item.get("음반소개", ""))
-        detail = item.get("detail", item.get("해설", ""))
+        full_text = " ".join([str(v) for v in item.values() if v is not None])
+
+        # 위치 번호 추출
+        loc = ""
+        loc_match = re.search(r'위치\s*[:_]?\s*@?([0-9]+)', full_text)
+        if loc_match:
+            loc = loc_match.group(1)
+        else:
+            for k, v in item.items():
+                if any(x in str(k) for x in ["위치", "loc", "번호"]):
+                    m = re.search(r'([0-9]+)', str(v))
+                    if m:
+                        loc = m.group(1)
+                        break
+
+        # 가수 및 앨범명 추출
+        artist = ""
+        title = ""
+        for k, v in item.items():
+            k_s = str(k)
+            if any(x in k_s for x in ["가수", "아티스트", "artist"]) and v:
+                artist = str(v).strip()
+            elif any(x in k_s for x in ["앨범", "title", "제목", "음반명"]) and v:
+                title = str(v).strip()
+
+        # 해설 본문 및 요약 추천글 분리
+        raw_detail = max([str(v) for v in item.values() if v is not None], key=len, default="")
+        intro_clean = ""
+        if "• 음반 소개:" in raw_detail:
+            parts = raw_detail.split("• 음반 소개:")
+            intro_clean = parts[-1].strip()
+        elif "음반소개:" in raw_detail:
+            parts = raw_detail.split("음반소개:")
+            intro_clean = parts[-1].strip()
+        else:
+            intro_clean = re.sub(r'^(LP_.*?\n|.*?위치\s*:.*?\n|.*?발매년도\s*:.*?\n)+', '', raw_detail).strip()
+
+        # 앨범명이 비어있을 경우 본문 속 《앨범명》 또는 <앨범명> 추출
+        if not title or title.startswith("@") or title == loc:
+            title_match = re.search(r'[《<](.*?)[》>]', intro_clean)
+            if title_match:
+                title = title_match.group(1).strip()
+
+        ai_summary = intro_clean[:160] + "..." if len(intro_clean) > 160 else intro_clean
+
+        # [위치: @번호] 다음에 앨범명 우선 표시
+        header_text = f"<span class='loc-tag'>[위치: @{loc}]</span> " if loc else ""
+        if title:
+            header_text += f"<b>{title}</b>"
+            if artist and artist != title:
+                header_text += f" ({artist})"
+        elif artist:
+            header_text += f"<b>{artist}</b>"
 
         st.markdown(f"""
         <div class="lp-card">
-            <div class="lp-loc">[위치: @{loc}] {artist} - {title}</div>
-            <div class="lp-meta">장르: {genre} | 발매년도: {year}</div>
+            <div class="lp-loc">{header_text}</div>
+            <div class="lp-meta">장르: - | 발매년도: 1 음반 데이터</div>
             <div class="lp-ai-box">
                 💡 <b>AI 추천 해설:</b><br>
-                • 음반 소개: {intro}
+                • 음반 소개: {ai_summary if ai_summary else '음반 소개 정보가 준비 중입니다.'}
             </div>
         </div>
         """, unsafe_allow_html=True)
 
-        with st.expander(f"📖 [위치: @{loc}] 해설 원본 열기"):
-            raw_text = detail if detail else intro
-            safe_text = str(raw_text).replace("~", "～")
+        expander_title = f"📖 [위치: @{loc}] 해설 원본 열기" if loc else "📖 해설 원본 열기"
+        with st.expander(expander_title):
+            safe_text = str(intro_clean if intro_clean else raw_detail).replace("~", "～")
             st.write(safe_text)
 else:
-    st.info("검색된 음반이 없습니다. 다른 키워드나 테마를 선택해 보세요.")
+    st.info("검색된 음반이 없습니다. 다른 키워드나 번호를 입력해 보세요.")
