@@ -112,18 +112,16 @@ if filtered:
         else:
             intro_clean = re.sub(r'^(LP_.*?\n|.*?위치\s*:.*?\n|.*?발매년도\s*:.*?\n)+', '', raw_detail).strip()
 
-        # 4. 아티스트 문자열 안에 '가수 - 앨범명' 형식인 경우 무조건 강제 분리
+        # 4. 아티스트란에 '가수 - 앨범명' 형식인 경우 분리
         if "-" in artist:
             parts = artist.split("-", 1)
             artist = parts[0].strip()
-            if not title:
-                title = parts[1].strip()
+            title = parts[1].strip()
 
-        # 5. 본문 속 《앨범명》 또는 <앨범명> 추출 (title이 없거나 @번호인 경우)
-        if not title or title.startswith("@") or title == loc:
-            title_match = re.search(r'[《<](.*?)[》>]', intro_clean)
-            if title_match:
-                title = title_match.group(1).strip()
+        # 5. 본문 속 [앨범명] 또는 《앨범명》, <앨범명>을 최우선 앨범명으로 추출
+        body_title_match = re.search(r'(?:앨범\s*)?[\[《<]([^\]》>]+)[\]》>]', intro_clean)
+        if body_title_match:
+            title = body_title_match.group(1).strip()
 
         ai_summary = intro_clean[:160] + "..." if len(intro_clean) > 160 else intro_clean
 
