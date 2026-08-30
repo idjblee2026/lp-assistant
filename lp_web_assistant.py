@@ -4,7 +4,6 @@ import os
 
 st.set_page_config(page_title="나만의 LP 서재 AI 음악 비서", page_icon="📀", layout="wide")
 
-# CSS 스타일링
 st.markdown("""
 <style>
     .main { background-color: #f8fafc; }
@@ -33,7 +32,7 @@ def load_data():
 
 data = load_data()
 
-# 1. 상단 감성 추천 테마 버튼
+# 상단 감성 프리셋 버튼
 MOOD_PRESETS = {
     "비 오는 날 감성 보컬": ["비", "차분", "우울", "재즈", "센티멘탈", "빗소리", "발라드", "스트링", "보컬"],
     "아침 서정적 클래식": ["아침", "상쾌", "산뜻", "서정적", "모차르트", "클래식", "기분전환", "밝은"],
@@ -48,7 +47,6 @@ for i, name in enumerate(MOOD_PRESETS.keys()):
     if cols[i].button(name):
         selected_preset = name
 
-# 2. 검색창 및 검색 버튼
 col_input, col_btn = st.columns([5, 1])
 with col_input:
     query = st.text_input("검색어를 입력하세요 (예: 비 오는 날 감성 보컬, 작곡가, 연주자, 위치 번호)", value=selected_preset if selected_preset else "")
@@ -72,15 +70,26 @@ if query:
     if results:
         st.write(f"총 **{len(results)}건**의 맞춤 음반을 찾았습니다:")
         for _, item in results[:40]:
-            loc = str(item.get('location', '미확인')).replace('@', '').strip()
-            artist = item.get('artist', '미확인')
-            album = item.get('album', '')
-            label = item.get('label', '미확인')
-            year = item.get('year', '1 음반 데이터')
-            genre = item.get('genre', '-')
+            loc = str(item.get('location', item.get('위치', '미확인'))).replace('@', '').strip()
+            artist = item.get('artist', item.get('Artists', item.get('가수/작곡가', '미확인')))
+            album = item.get('album', item.get('앨범명', ''))
+            year = item.get('year', item.get('발매년도', '1 음반 데이터'))
+            genre = item.get('genre', item.get('장르', '-'))
             
-            intro = item.get('intro') or item.get('description') or item.get('summary') or '소장 LP 기본 음반입니다.'
-            detail = item.get('full_text') or item.get('content') or item.get('tracks') or intro
+            # 워드 본문 전체 내용 가져오기
+            detail = item.get('full_text') or item.get('content') or item.get('tracks') or item.get('description') or ''
+            
+            # AI 추천 해설: 워드 본문 중 '음반 소개' 또는 첫 설명 문단 추출
+            intro = item.get('intro') or item.get('summary') or ''
+            if not intro and detail:
+                paragraphs = [p.strip() for p in detail.split('\n') if len(p.strip()) > 30]
+                if paragraphs:
+                    intro = paragraphs[0]
+                else:
+                    intro = detail[:200] + "..."
+            
+            if not intro:
+                intro = "소장 LP 음반 해설입니다."
 
             st.markdown(f"""
             <div class="lp-card">
@@ -94,7 +103,7 @@ if query:
             """, unsafe_allow_html=True)
             
             with st.expander(f"📖 [위치: @{loc}] 해설 원본 열기"):
-                st.write(detail)
+                st.write(detail if detail else intro)
     else:
         st.info("검색된 음반이 없습니다. 다른 키워드나 테마 버튼을 선택해 보세요.")
 else:
