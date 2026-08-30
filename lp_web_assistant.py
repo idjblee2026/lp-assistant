@@ -5,75 +5,74 @@ import re
 
 st.set_page_config(page_title="나만의 LP 서재 AI 음악 비서", layout="wide", initial_sidebar_state="collapsed")
 
+# PC와 태블릿/스마트폰 글자 크기 분리 스타일 적용
 st.markdown("""
 <style>
     .main { background-color: #f8fafc; }
+    
+    /* 1. 기본 PC 화면 스타일 (단정하고 편안한 기본 크기) */
     .lp-card {
         background-color: #ffffff;
-        border-radius: 14px;
-        padding: 26px 28px;
-        margin-bottom: 24px;
-        border-left: 10px solid #2563eb;
-        box-shadow: 0 3px 10px rgba(0,0,0,0.07);
+        border-radius: 12px;
+        padding: 18px 22px;
+        margin-bottom: 18px;
+        border-left: 7px solid #2563eb;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
-    
-    /* 1. 제목 및 위치 번호 (시원하게 대형 확대) */
-    .lp-loc { 
-        font-size: 26px !important; 
-        font-weight: 800 !important; 
-        color: #0f172a !important; 
-        line-height: 1.4 !important; 
-    }
-    .lp-loc span.loc-tag { 
-        color: #dc2626 !important; 
-        font-size: 26px !important; 
-        font-weight: 800 !important; 
-    }
-    
-    /* 2. 부가 정보 */
-    .lp-meta { 
-        font-size: 19px !important; 
-        color: #475569 !important; 
-        margin: 8px 0 16px 0 !important; 
-    }
-    
-    /* 3. AI 추천 해설 박스 및 글자 (노안/아이패드 맞춤 초대형 글씨) */
+    .lp-loc { font-size: 19px !important; font-weight: bold !important; color: #0f172a !important; line-height: 1.4 !important; }
+    .lp-loc span.loc-tag { color: #dc2626 !important; font-size: 19px !important; }
+    .lp-meta { font-size: 14px !important; color: #64748b !important; margin: 4px 0 10px 0 !important; }
     .lp-ai-box { 
         background-color: #f1f5f9 !important; 
-        border-radius: 12px !important; 
-        padding: 22px 24px !important; 
-        margin-top: 14px !important; 
-        font-size: 23px !important; 
-        font-weight: 500 !important; 
-        color: #0f172a !important; 
-        line-height: 1.85 !important; 
+        border-radius: 8px !important; 
+        padding: 14px 16px !important; 
+        margin-top: 8px !important; 
+        font-size: 15px !important; 
+        color: #1e293b !important; 
+        line-height: 1.65 !important; 
         word-break: keep-all !important;
-        letter-spacing: -0.3px !important;
     }
-    .lp-ai-box b {
-        font-size: 24px !important;
-        color: #1e3a8a !important;
-    }
-    
-    /* 4. 해설 원본 열기 제목 버튼 */
-    [data-testid="stExpander"] details summary span {
-        font-size: 23px !important;
-        font-weight: 700 !important;
-        color: #1e40af !important;
-        padding: 6px 0 !important;
-    }
-    
-    /* 5. 해설 원본 본문 글자 (초대형 및 높은 가독성) */
     .expander-content {
-        font-size: 23px !important;
-        line-height: 1.9 !important;
-        color: #0f172a !important;
+        font-size: 15px !important;
+        line-height: 1.7 !important;
+        color: #1e293b !important;
         background-color: #ffffff !important;
-        padding: 20px !important;
-        border-radius: 10px !important;
-        border: 1px solid #e2e8f0 !important;
+        padding: 14px !important;
+        border-radius: 8px !important;
         word-break: keep-all !important;
-        letter-spacing: -0.3px !important;
+    }
+
+    /* 2. 아이패드 및 태블릿/모바일 전용 스타일 (시원한 대형 글씨 자동 전환) */
+    @media screen and (max-width: 1024px) {
+        .lp-card {
+            padding: 24px 26px !important;
+            margin-bottom: 22px !important;
+            border-left: 10px solid #2563eb !important;
+        }
+        .lp-loc { font-size: 26px !important; line-height: 1.4 !important; font-weight: 800 !important; }
+        .lp-loc span.loc-tag { font-size: 26px !important; font-weight: 800 !important; }
+        .lp-meta { font-size: 18px !important; margin: 8px 0 14px 0 !important; }
+        
+        /* 아이패드용 AI 추천 해설 대형 글씨 */
+        .lp-ai-box { 
+            padding: 20px 22px !important; 
+            font-size: 24px !important; 
+            font-weight: 500 !important;
+            line-height: 1.85 !important; 
+        }
+        .lp-ai-box b { font-size: 25px !important; color: #1e3a8a !important; }
+        
+        /* 아이패드용 해설 원본 대형 글씨 */
+        [data-testid="stExpander"] details summary span {
+            font-size: 24px !important;
+            font-weight: bold !important;
+            padding: 8px 0 !important;
+        }
+        .expander-content {
+            font-size: 23px !important;
+            line-height: 1.85 !important;
+            padding: 20px !important;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
