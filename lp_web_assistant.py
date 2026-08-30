@@ -69,49 +69,65 @@ else:
 if filtered:
     st.write(f"총 **{len(filtered)}**개의 음반이 검색되었습니다.")
     for item in filtered:
-        # 1. 위치 번호 추출 (@숫자 형식 또는 번호 필드 자동 탐색)
+        full_text = " ".join([str(v) for v in item.values() if v is not None])
+
+        # 1. 위치 번호 숫자만 깔끔하게 추출 (예: 108)
         loc = ""
-        full_text_combined = " ".join([str(v) for v in item.values() if v is not None])
-        
-        # 텍스트 전체에서 위치 번호 패턴 탐색 (예: 위치 : @105, @105, 위치_235 등)
-        loc_match = re.search(r'위치\s*[:_]\s*@?([0-9A-Za-z_-]+)', full_text_combined)
+        loc_match = re.search(r'위치\s*[:_]?\s*@?([0-9]+)', full_text)
         if loc_match:
-            loc = loc_match.group(1).strip()
+            loc = loc_match.group(1)
         else:
             for k, v in item.items():
-                if any(x in str(k) for x in ["위치", "loc", "연번", "번호"]) and v:
-                    loc = str(v).replace("@", "").strip()
-                    break
+                if any(x in str(k) for x in ["위치", "loc", "번호"]):
+                    m = re.search(r'([0-9]+)', str(v))
+                    if m:
+                        loc = m.group(1)
+                        break
 
-        # 2. 텍스트 값들을 길이순/내용순으로 분류
-        values = [str(v).strip() for v in item.values() if v is not None and str(v).strip() not in ["", "nan", "None"]]
-        
-        # 아티스트 및 앨범명 추출
+        # 2. 가수 및 앨범명 추출
         artist = ""
         title = ""
         for k, v in item.items():
-            k_str = str(k)
-            if any(x in k_str for x in ["가수", "아티스트", "artist"]) and v:
+            k_s = str(k)
+            if any(x in k_s for x in ["가수", "아티스트", "artist"]) and v:
                 artist = str(v).strip()
-            elif any(x in k_str for x in ["앨범", "title", "제목", "음반명"]) and v:
+            elif any(x in k_s for x in ["앨범", "title", "제목", "음반명"]) and v:
                 title = str(v).strip()
 
-        # 키로 못 찾았을 때 짧은 텍스트들에서 추정
-        if not artist and len(values) > 0:
-            artist = values[0]
-        if not title and len(values) > 1 and values[1] != artist:
-            title = values[1]
+        # 데이터가 통문장으로 뭉쳐있을 경우 정제
+        if not artist:
+            for v in item.values():
+                val_s = str(v).strip()
+                if 2 < len(val_s) < 30 and not val_s.startswith("@") and not val_s.startswith("LP_"):
+                    artist = val_s
+                    break
 
-        # 3. 해설/소개 텍스트 자동 추출 (가장 긴 본문 텍스트들 활용)
-        long_texts = sorted([v for v in values if len(v) > 25], key=len, reverse=True)
+        # 3. 앨범명에서 불필요한 번호 제거
+        if title.startswith("@") or title == loc or title == f"@{loc}":
+            title = ""
+
+        # 4. 해설 본문 및 요약 추천글 분리
+        # 가장 긴 텍스트를 원문으로 사용
+        raw_detail = max([str(v) for v in item.values() if v is not None], key=len, default="")
         
-        detail_text = long_texts[0] if len(long_texts) > 0 else full_text_combined
-        intro_text = long_texts[1] if len(long_texts) > 1 else (detail_text[:150] + "..." if len(detail_text) > 150 else detail_text)
+        # '• 음반 소개:' 이후의 실제 설명 문장만 추출
+        intro_clean = ""
+        if "• 음반 소개:" in raw_detail:
+            parts = raw_detail.split("• 음반 소개:")
+            intro_clean = parts[-1].strip()
+        elif "음반소개:" in raw_detail:
+            parts = raw_detail.split("음반소개:")
+            intro_clean = parts[-1].strip()
+        else:
+            intro_clean = re.sub(r'^(LP_.*?\n|.*?위치\s*:.*?\n|.*?발매년도\s*:.*?\n)+', '', raw_detail).strip()
 
-        # 헤더 표시
+        # 상단 추천글은 PC처럼 150자 내외로 깔끔하게 요약 표시
+        ai_summary = intro_clean[:160] + "..." if len(intro_clean) > 160 else intro_clean
+
+        # 헤더 조립
         header_text = f"<span class='loc-tag'>[위치: @{loc}]</span> " if loc else ""
         header_text += artist
-        if title and title != artist:
+        if title:
             header_text += f" - {title}"
 
         st.markdown(f"""
@@ -120,14 +136,14 @@ if filtered:
             <div class="lp-meta">장르: - | 발매년도: 1 음반 데이터</div>
             <div class="lp-ai-box">
                 💡 <b>AI 추천 해설:</b><br>
-                • 음반 소개: {intro_text}
+                • 음반 소개: {ai_summary if ai_summary else '음반 소개 정보가 준비 중입니다.'}
             </div>
         </div>
         """, unsafe_allow_html=True)
 
         expander_title = f"📖 [위치: @{loc}] 해설 원본 열기" if loc else "📖 해설 원본 열기"
         with st.expander(expander_title):
-            safe_text = str(detail_text).replace("~", "～")
+            safe_text = str(intro_clean if intro_clean else raw_detail).replace("~", "～")
             st.write(safe_text)
 else:
     st.info("검색된 음반이 없습니다. 다른 키워드나 번호를 입력해 보세요.")
