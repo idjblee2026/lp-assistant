@@ -103,7 +103,8 @@ if query:
             """, unsafe_allow_html=True)
             
             with st.expander(f"📖 [위치: @{loc}] 해설 원본 열기"):
-                st.write(detail if detail else intro)
+                raw_text = detail if detail else intro
+st.write(str(raw_text).replace("~", "～"))
     else:
         st.info("검색된 음반이 없습니다. 다른 키워드나 테마 버튼을 선택해 보세요.")
 else:
