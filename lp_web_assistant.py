@@ -10,39 +10,50 @@ st.markdown("""
 <style>
     .main { background-color: #f8fafc; }
     
-    /* 1. 기본 PC 화면 스타일 (단정하고 편안한 기본 크기) */
+    /* 1. PC 화면 스타일 (기존보다 한 단계 더 크고 또렷하게 조정) */
     .lp-card {
         background-color: #ffffff;
         border-radius: 12px;
-        padding: 18px 22px;
-        margin-bottom: 18px;
-        border-left: 7px solid #2563eb;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        padding: 22px 24px;
+        margin-bottom: 20px;
+        border-left: 8px solid #2563eb;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     }
-    .lp-loc { font-size: 19px !important; font-weight: bold !important; color: #0f172a !important; line-height: 1.4 !important; }
-    .lp-loc span.loc-tag { color: #dc2626 !important; font-size: 19px !important; }
-    .lp-meta { font-size: 14px !important; color: #64748b !important; margin: 4px 0 10px 0 !important; }
+    .lp-loc { font-size: 22px !important; font-weight: bold !important; color: #0f172a !important; line-height: 1.4 !important; }
+    .lp-loc span.loc-tag { color: #dc2626 !important; font-size: 22px !important; }
+    .lp-meta { font-size: 16px !important; color: #64748b !important; margin: 6px 0 12px 0 !important; }
+    
+    /* PC용 AI 추천 해설 글자 크기 확대 (18px) */
     .lp-ai-box { 
         background-color: #f1f5f9 !important; 
-        border-radius: 8px !important; 
-        padding: 14px 16px !important; 
-        margin-top: 8px !important; 
-        font-size: 15px !important; 
+        border-radius: 10px !important; 
+        padding: 16px 18px !important; 
+        margin-top: 10px !important; 
+        font-size: 18px !important; 
         color: #1e293b !important; 
-        line-height: 1.65 !important; 
+        line-height: 1.7 !important; 
         word-break: keep-all !important;
     }
+    .lp-ai-box b { font-size: 19px !important; color: #1e3a8a !important; }
+    
+    /* PC용 해설 원본 글자 크기 확대 (18px) */
+    [data-testid="stExpander"] details summary span {
+        font-size: 19px !important;
+        font-weight: bold !important;
+        color: #1e40af !important;
+    }
     .expander-content {
-        font-size: 15px !important;
-        line-height: 1.7 !important;
+        font-size: 18px !important;
+        line-height: 1.75 !important;
         color: #1e293b !important;
         background-color: #ffffff !important;
-        padding: 14px !important;
+        padding: 16px !important;
         border-radius: 8px !important;
+        border: 1px solid #e2e8f0 !important;
         word-break: keep-all !important;
     }
 
-    /* 2. 아이패드 및 태블릿/모바일 전용 스타일 (시원한 대형 글씨 자동 전환) */
+    /* 2. 아이패드 및 모바일 전용 스타일 (초대형 글씨 유지) */
     @media screen and (max-width: 1024px) {
         .lp-card {
             padding: 24px 26px !important;
@@ -53,7 +64,6 @@ st.markdown("""
         .lp-loc span.loc-tag { font-size: 26px !important; font-weight: 800 !important; }
         .lp-meta { font-size: 18px !important; margin: 8px 0 14px 0 !important; }
         
-        /* 아이패드용 AI 추천 해설 대형 글씨 */
         .lp-ai-box { 
             padding: 20px 22px !important; 
             font-size: 24px !important; 
@@ -62,7 +72,6 @@ st.markdown("""
         }
         .lp-ai-box b { font-size: 25px !important; color: #1e3a8a !important; }
         
-        /* 아이패드용 해설 원본 대형 글씨 */
         [data-testid="stExpander"] details summary span {
             font-size: 24px !important;
             font-weight: bold !important;
