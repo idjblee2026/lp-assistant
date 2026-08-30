@@ -76,7 +76,7 @@ if filtered:
     for item in filtered:
         full_text = " ".join([str(v) for v in item.values() if v is not None])
 
-        # 위치 번호 추출
+        # 1. 위치 번호 추출
         loc = ""
         loc_match = re.search(r'위치\s*[:_]?\s*@?([0-9]+)', full_text)
         if loc_match:
@@ -89,7 +89,7 @@ if filtered:
                         loc = m.group(1)
                         break
 
-        # 아티스트 및 앨범명 추출
+        # 2. 텍스트 추출 및 정밀 분리
         artist = ""
         title = ""
         for k, v in item.items():
@@ -99,7 +99,7 @@ if filtered:
             elif any(x in k_s for x in ["앨범", "title", "제목", "음반명"]) and v:
                 title = str(v).strip()
 
-        # 해설 본문 및 요약 추천글 분리
+        # 해설 본문 분리
         raw_detail = max([str(v) for v in item.values() if v is not None], key=len, default="")
         intro_clean = ""
         if "• 음반 소개:" in raw_detail:
@@ -111,7 +111,13 @@ if filtered:
         else:
             intro_clean = re.sub(r'^(LP_.*?\n|.*?위치\s*:.*?\n|.*?발매년도\s*:.*?\n)+', '', raw_detail).strip()
 
-        # 앨범명이 누락된 경우 본문 속 《앨범명》 자동 탐색
+        # 아티스트란에 '가수 - 앨범명'이 통째로 들어있는 경우 분리
+        if " - " in artist and not title:
+            a_parts = artist.split(" - ", 1)
+            artist = a_parts[0].strip()
+            title = a_parts[1].strip()
+
+        # 앨범명이 누락되었으면 본문 속 《앨범명》 자동 탐색
         if not title or title.startswith("@") or title == loc:
             title_match = re.search(r'[《<](.*?)[》>]', intro_clean)
             if title_match:
@@ -119,11 +125,11 @@ if filtered:
 
         ai_summary = intro_clean[:160] + "..." if len(intro_clean) > 160 else intro_clean
 
-        # [위치: @번호] 다음에 앨범명을 1순위로 표시
+        # [위치: @번호] 다음에 앨범명이 가장 먼저 오도록 배치
         header_text = f"<span class='loc-tag'>[위치: @{loc}]</span> " if loc else ""
         if title:
             header_text += f"<b>{title}</b>"
-            if artist and artist != title:
+            if artist:
                 header_text += f" ({artist})"
         elif artist:
             header_text += f"<b>{artist}</b>"
