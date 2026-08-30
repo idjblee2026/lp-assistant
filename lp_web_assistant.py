@@ -37,6 +37,15 @@ def load_data():
 
 lp_data = load_data()
 
+def find_val(item, *keys):
+    for k in keys:
+        for item_k in item.keys():
+            if k.lower() in str(item_k).lower():
+                val = item[item_k]
+                if val is not None and str(val).strip() != "":
+                    return str(val).strip()
+    return ""
+
 # 검색창
 query = st.text_input("🔍 음반 제목, 아티스트, 번호(위치), 또는 분위기를 검색하세요:", "")
 
@@ -52,27 +61,32 @@ else:
 if filtered:
     st.write(f"총 **{len(filtered)}**개의 음반이 검색되었습니다.")
     for item in filtered:
-        loc = item.get("loc", item.get("위치", item.get("연번", "")))
-        title = item.get("title", item.get("앨범명", item.get("타이틀", "")))
-        artist = item.get("artist", item.get("아티스트", item.get("가수", "")))
-        genre = item.get("genre", item.get("장르", ""))
-        year = item.get("year", item.get("발매년도", ""))
-        intro = item.get("intro", item.get("음반소개", item.get("추천사유", "")))
-        detail = item.get("detail", item.get("해설", item.get("내용", "")))
+        loc = find_val(item, "loc", "위치", "연번", "번호", "id")
+        title = find_val(item, "title", "앨범", "제목", "타이틀", "음반명")
+        artist = find_val(item, "artist", "아티스트", "가수", "연주")
+        genre = find_val(item, "genre", "장르", "구분")
+        year = find_val(item, "year", "발매", "연도", "년도")
+        intro = find_val(item, "intro", "소개", "추천", "사유", "특징")
+        detail = find_val(item, "detail", "해설", "내용", "설명", "원본")
+
+        display_header = f"[위치: @{loc}] {artist}"
+        if title:
+            display_header += f" - {title}"
 
         st.markdown(f"""
         <div class="lp-card">
-            <div class="lp-loc">[위치: @{loc}] {artist} - {title}</div>
-            <div class="lp-meta">장르: {genre} | 발매년도: {year}</div>
+            <div class="lp-loc">{display_header}</div>
+            <div class="lp-meta">장르: {genre if genre else '기타'} | 발매년도: {year if year else '정보없음'}</div>
             <div class="lp-ai-box">
                 💡 <b>AI 추천 해설:</b><br>
-                • 음반 소개: {intro}
+                • 음반 소개: {intro if intro else '소개 정보가 없습니다.'}
             </div>
         </div>
         """, unsafe_allow_html=True)
 
-        with st.expander(f"📖 [위치: @{loc}] 해설 원본 열기"):
-            raw_text = detail if detail else intro
+        expander_title = f"📖 [위치: @{loc}] 해설 원본 열기" if loc else "📖 해설 원본 열기"
+        with st.expander(expander_title):
+            raw_text = detail if detail else (intro if intro else "등록된 상세 해설이 없습니다.")
             safe_text = str(raw_text).replace("~", "～")
             st.write(safe_text)
 else:
