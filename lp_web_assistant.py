@@ -10,15 +10,16 @@ st.markdown("""
     .lp-card {
         background-color: #ffffff;
         border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 12px;
-        border-left: 5px solid #2563eb;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        padding: 18px;
+        margin-bottom: 16px;
+        border-left: 6px solid #2563eb;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
     }
-    .lp-loc { font-size: 16px; font-weight: bold; color: #dc2626; }
-    .lp-title { font-size: 18px; font-weight: bold; color: #1e293b; margin: 4px 0; }
-    .lp-meta { font-size: 13px; color: #64748b; margin-bottom: 8px; }
-    .lp-desc { font-size: 14px; color: #334155; line-height: 1.5; white-space: pre-line; }
+    .lp-loc { font-size: 17px; font-weight: bold; color: #dc2626; margin-bottom: 4px; }
+    .lp-title { font-size: 19px; font-weight: bold; color: #0f172a; margin: 4px 0 8px 0; }
+    .lp-meta { font-size: 13px; color: #475569; margin-bottom: 12px; background-color: #f1f5f9; padding: 6px 10px; border-radius: 6px; }
+    .lp-section-title { font-size: 14px; font-weight: bold; color: #1e40af; margin-top: 10px; margin-bottom: 4px; }
+    .lp-desc { font-size: 14px; color: #334155; line-height: 1.6; white-space: pre-line; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -58,7 +59,7 @@ if query:
 
     results = []
     for item in data:
-        full_text = f"{item.get('location', '')} {item.get('artist', '')} {item.get('album', '')} {item.get('genre', '')} {item.get('tracks', '')} {item.get('description', '')}"
+        full_text = f"{item.get('location', '')} {item.get('artist', '')} {item.get('album', '')} {item.get('genre', '')} {item.get('tracks', '')} {item.get('description', '')} {item.get('intro', '')} {item.get('content', '')}"
         
         score = sum(1 for term in query_terms if term.lower() in full_text.lower())
         if score > 0:
@@ -68,13 +69,22 @@ if query:
 
     st.write(f"총 **{len(results)}개**의 맞춤 음반을 찾았습니다:")
     for _, item in results[:30]:
+        loc = str(item.get('location', '미확인')).replace('@', '').strip()
+        intro_text = item.get('intro') or item.get('description') or '등록된 개요가 없습니다.'
+        detail_content = item.get('content') or item.get('tracks') or item.get('raw_text') or ''
+
         st.markdown(f"""
         <div class="lp-card">
-            <div class="lp-loc">📍 서재 위치: @{item.get('location', '미확인')}</div>
+            <div class="lp-loc">📍 서재 위치: @{loc}</div>
             <div class="lp-title">{item.get('artist', '미확인')} - {item.get('album', '')}</div>
-            <div class="lp-meta">🏷️ 레이블: {item.get('label', '미확인')} | 📅 발매년도: {item.get('year', '미확인')} | 🎷 장르: {item.get('genre', '')}</div>
-            <div class="lp-desc">{item.get('description', '')}</div>
+            <div class="lp-meta">🏷️ 레이블: {item.get('label', '미확인')} | 📅 발매년도: {item.get('year', '미확인')} | 🎷 장르: {item.get('genre', '-')}</div>
+            <div class="lp-section-title">📖 음반 개요</div>
+            <div class="lp-desc">{intro_text}</div>
         </div>
         """, unsafe_allow_html=True)
+        
+        if detail_content:
+            with st.expander(f"📄 @{loc} 세부 워드문서 전문 펼쳐보기"):
+                st.write(detail_content)
 else:
     st.info("💡 위의 감성 테마 버튼을 누르시거나, 검색창에 원하시는 분위기/가수/위치 번호를 입력해 보세요.")
