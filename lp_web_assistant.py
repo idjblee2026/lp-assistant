@@ -1,21 +1,13 @@
 import streamlit as st
 import json
 import os
+import re
 
 st.set_page_config(page_title="나만의 LP 서재 AI 음악 비서", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
 <style>
     .main { background-color: #f8fafc; }
-    .stTextInput > div > div > input {
-        border-radius: 8px;
-    }
-    .theme-btn-container {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        margin-bottom: 20px;
-    }
     .lp-card {
         background-color: #ffffff;
         border-radius: 12px;
@@ -33,7 +25,6 @@ st.markdown("""
 
 st.title("📀 나만의 LP 서재 AI 음악 비서")
 
-# 데이터 로드
 @st.cache_data
 def load_data():
     json_path = os.path.join(os.path.dirname(__file__), "lp_database.json")
@@ -44,11 +35,9 @@ def load_data():
 
 lp_data = load_data()
 
-# 세션 상태 초기화 (테마 버튼용)
 if "search_query" not in st.session_state:
     st.session_state.search_query = ""
 
-# 상단 감성 테마 버튼
 col1, col2, col3, col4, col5 = st.columns(5)
 with col1:
     if st.button("🟠 아침 서정적 클래식"):
@@ -66,16 +55,7 @@ with col5:
     if st.button("🎸 80년대 팝"):
         st.session_state.search_query = "80년대"
 
-# 검색창
 query = st.text_input("🔍 음반 제목, 아티스트, 번호(위치), 또는 분위기를 검색하세요:", value=st.session_state.search_query)
-
-def get_field_val(item, keys):
-    for k in keys:
-        if k in item and item[k] is not None:
-            val = str(item[k]).strip()
-            if val and val != "nan":
-                return val
-    return ""
 
 if query:
     q = query.lower().strip()
@@ -89,41 +69,65 @@ else:
 if filtered:
     st.write(f"총 **{len(filtered)}**개의 음반이 검색되었습니다.")
     for item in filtered:
-        # 데이터 항목 정확 매칭
-        raw_loc = get_field_val(item, ["위치", "loc", "연번", "번호"])
-        loc = raw_loc.lstrip("@").strip()
+        # 1. 위치 번호 추출 (@숫자 형식 또는 번호 필드 자동 탐색)
+        loc = ""
+        full_text_combined = " ".join([str(v) for v in item.values() if v is not None])
         
-        artist = get_field_val(item, ["가수명/그룹명", "아티스트", "artist", "가수"])
-        title = get_field_val(item, ["앨범명", "title", "제목", "음반명"])
-        genre = get_field_val(item, ["장르", "genre"])
-        year = get_field_val(item, ["발매년도", "year", "연도"])
-        intro = get_field_val(item, ["AI추천해설", "추천사유", "음반소개", "intro", "소개"])
-        detail = get_field_val(item, ["해설원본", "해설", "detail", "내용"])
+        # 텍스트 전체에서 위치 번호 패턴 탐색 (예: 위치 : @105, @105, 위치_235 등)
+        loc_match = re.search(r'위치\s*[:_]\s*@?([0-9A-Za-z_-]+)', full_text_combined)
+        if loc_match:
+            loc = loc_match.group(1).strip()
+        else:
+            for k, v in item.items():
+                if any(x in str(k) for x in ["위치", "loc", "연번", "번호"]) and v:
+                    loc = str(v).replace("@", "").strip()
+                    break
 
-        # 헤더 텍스트 구성
+        # 2. 텍스트 값들을 길이순/내용순으로 분류
+        values = [str(v).strip() for v in item.values() if v is not None and str(v).strip() not in ["", "nan", "None"]]
+        
+        # 아티스트 및 앨범명 추출
+        artist = ""
+        title = ""
+        for k, v in item.items():
+            k_str = str(k)
+            if any(x in k_str for x in ["가수", "아티스트", "artist"]) and v:
+                artist = str(v).strip()
+            elif any(x in k_str for x in ["앨범", "title", "제목", "음반명"]) and v:
+                title = str(v).strip()
+
+        # 키로 못 찾았을 때 짧은 텍스트들에서 추정
+        if not artist and len(values) > 0:
+            artist = values[0]
+        if not title and len(values) > 1 and values[1] != artist:
+            title = values[1]
+
+        # 3. 해설/소개 텍스트 자동 추출 (가장 긴 본문 텍스트들 활용)
+        long_texts = sorted([v for v in values if len(v) > 25], key=len, reverse=True)
+        
+        detail_text = long_texts[0] if len(long_texts) > 0 else full_text_combined
+        intro_text = long_texts[1] if len(long_texts) > 1 else (detail_text[:150] + "..." if len(detail_text) > 150 else detail_text)
+
+        # 헤더 표시
         header_text = f"<span class='loc-tag'>[위치: @{loc}]</span> " if loc else ""
         header_text += artist
-        if title:
+        if title and title != artist:
             header_text += f" - {title}"
-
-        # AI 추천 해설 구성
-        ai_desc = intro if intro else (detail[:160] + "..." if len(detail) > 160 else detail)
 
         st.markdown(f"""
         <div class="lp-card">
             <div class="lp-loc">{header_text}</div>
-            <div class="lp-meta">장르: {genre if genre else '-'} | 발매년도: {year if year else '1'} 음반 데이터</div>
+            <div class="lp-meta">장르: - | 발매년도: 1 음반 데이터</div>
             <div class="lp-ai-box">
                 💡 <b>AI 추천 해설:</b><br>
-                • 음반 소개: {ai_desc}
+                • 음반 소개: {intro_text}
             </div>
         </div>
         """, unsafe_allow_html=True)
 
-        expander_label = f"📖 [위치: @{loc}] 해설 원본 열기" if loc else "📖 해설 원본 열기"
-        with st.expander(expander_label):
-            full_text = detail if detail else (intro if intro else "등록된 해설 내용이 없습니다.")
-            safe_text = str(full_text).replace("~", "～")
+        expander_title = f"📖 [위치: @{loc}] 해설 원본 열기" if loc else "📖 해설 원본 열기"
+        with st.expander(expander_title):
+            safe_text = str(detail_text).replace("~", "～")
             st.write(safe_text)
 else:
     st.info("검색된 음반이 없습니다. 다른 키워드나 번호를 입력해 보세요.")
