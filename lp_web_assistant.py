@@ -58,21 +58,14 @@ with col5:
 query = st.text_input("🔍 음반 제목, 아티스트, 번호(위치), 또는 분위기를 검색하세요:", value=st.session_state.search_query)
 
 if query:
-    # 자연어 문장에서 핵심 검색 키워드 추출 (2글자 이상 단어들)
     clean_query = query.lower().strip()
     words = [w for w in re.split(r'[\s,./?~!@#]+', clean_query) if len(w) >= 2]
-    
-    # 만약 @숫자 형식이면 그 번호 우선 검색
-    exact_loc_match = re.search(r'@?([0-9]+)', clean_query)
     
     filtered = []
     for item in lp_data:
         item_text = " ".join([str(v).lower() for v in item.values() if v is not None])
-        
-        # 1. 문장 전체가 포함된 경우
         if clean_query in item_text:
             filtered.append(item)
-        # 2. 문장의 핵심 단어들 중 하나라도 포함된 경우 (자연어 감성 검색)
         elif words and any(w in item_text for w in words):
             filtered.append(item)
 else:
@@ -106,16 +99,6 @@ if filtered:
             elif any(x in k_s for x in ["앨범", "title", "제목", "음반명"]) and v:
                 title = str(v).strip()
 
-        if not artist:
-            for v in item.values():
-                val_s = str(v).strip()
-                if 2 < len(val_s) < 30 and not val_s.startswith("@") and not val_s.startswith("LP_"):
-                    artist = val_s
-                    break
-
-        if title.startswith("@") or title == loc or title == f"@{loc}":
-            title = ""
-
         # 해설 본문 및 요약 추천글 분리
         raw_detail = max([str(v) for v in item.values() if v is not None], key=len, default="")
         intro_clean = ""
@@ -128,12 +111,22 @@ if filtered:
         else:
             intro_clean = re.sub(r'^(LP_.*?\n|.*?위치\s*:.*?\n|.*?발매년도\s*:.*?\n)+', '', raw_detail).strip()
 
+        # 앨범명이 비어있을 경우 해설 본문 속 《앨범명》 또는 <앨범명> 추출
+        if not title or title.startswith("@") or title == loc:
+            title_match = re.search(r'[《<](.*?)[》>]', intro_clean)
+            if title_match:
+                title = title_match.group(1).strip()
+
         ai_summary = intro_clean[:160] + "..." if len(intro_clean) > 160 else intro_clean
 
+        # [위치: @번호] 다음에 앨범명이 먼저 나오도록 구성
         header_text = f"<span class='loc-tag'>[위치: @{loc}]</span> " if loc else ""
-        header_text += artist
         if title:
-            header_text += f" - {title}"
+            header_text += f"<b>{title}</b>"
+            if artist and artist != title:
+                header_text += f" ({artist})"
+        elif artist:
+            header_text += f"<b>{artist}</b>"
 
         st.markdown(f"""
         <div class="lp-card">
