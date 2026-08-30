@@ -37,14 +37,14 @@ def load_data():
 
 lp_data = load_data()
 
-def find_val(item, *keys):
-    for k in keys:
-        for item_k in item.keys():
-            if k.lower() in str(item_k).lower():
-                val = item[item_k]
-                if val is not None and str(val).strip() != "":
-                    return str(val).strip()
-    return ""
+def get_field(item, keywords, default=""):
+    for k, v in item.items():
+        k_clean = str(k).lower().replace(" ", "").replace("_", "")
+        for kw in keywords:
+            if kw.lower() in k_clean:
+                if v is not None and str(v).strip() != "" and str(v).strip() != "nan":
+                    return str(v).strip()
+    return default
 
 # 검색창
 query = st.text_input("🔍 음반 제목, 아티스트, 번호(위치), 또는 분위기를 검색하세요:", "")
@@ -61,15 +61,26 @@ else:
 if filtered:
     st.write(f"총 **{len(filtered)}**개의 음반이 검색되었습니다.")
     for item in filtered:
-        loc = find_val(item, "loc", "위치", "연번", "번호", "id")
-        title = find_val(item, "title", "앨범", "제목", "타이틀", "음반명")
-        artist = find_val(item, "artist", "아티스트", "가수", "연주")
-        genre = find_val(item, "genre", "장르", "구분")
-        year = find_val(item, "year", "발매", "연도", "년도")
-        intro = find_val(item, "intro", "소개", "추천", "사유", "특징")
-        detail = find_val(item, "detail", "해설", "내용", "설명", "원본")
+        # 데이터 매칭
+        raw_loc = get_field(item, ["loc", "위치", "연번", "번호", "id", "no"])
+        loc = raw_loc.lstrip("@")  # @ 중복 방지
 
-        display_header = f"[위치: @{loc}] {artist}"
+        title = get_field(item, ["title", "앨범", "제목", "타이틀", "음반명", "곡명"])
+        artist = get_field(item, ["artist", "아티스트", "가수", "연주"])
+        genre = get_field(item, ["genre", "장르", "구분"])
+        year = get_field(item, ["year", "발매", "연도", "년도"])
+        intro = get_field(item, ["intro", "소개", "추천", "사유", "특징", "감성"])
+        detail = get_field(item, ["detail", "해설", "내용", "설명", "원본", "원문", "본문"])
+
+        # 만약 intro나 detail이 비어있다면, 내용이 긴 다른 항목을 자동으로 가져옴
+        if not detail and not intro:
+            texts = [str(v) for k, v in item.items() if len(str(v)) > 20 and v is not None]
+            if texts:
+                detail = "\n\n".join(texts)
+
+        display_header = f"[위치: @{loc}]" if loc else ""
+        if artist:
+            display_header += f" {artist}"
         if title:
             display_header += f" - {title}"
 
@@ -79,15 +90,18 @@ if filtered:
             <div class="lp-meta">장르: {genre if genre else '기타'} | 발매년도: {year if year else '정보없음'}</div>
             <div class="lp-ai-box">
                 💡 <b>AI 추천 해설:</b><br>
-                • 음반 소개: {intro if intro else '소개 정보가 없습니다.'}
+                • 음반 소개: {intro if intro else (detail[:150] + '...' if len(detail) > 150 else detail if detail else '소개 정보가 없습니다.')}
             </div>
         </div>
         """, unsafe_allow_html=True)
 
         expander_title = f"📖 [위치: @{loc}] 해설 원본 열기" if loc else "📖 해설 원본 열기"
         with st.expander(expander_title):
-            raw_text = detail if detail else (intro if intro else "등록된 상세 해설이 없습니다.")
-            safe_text = str(raw_text).replace("~", "～")
+            full_content = detail if detail else intro
+            if not full_content:
+                # 모든 항목 내용을 표시
+                full_content = "\n\n".join([f"**{k}**: {v}" for k, v in item.items() if v])
+            safe_text = str(full_content).replace("~", "～")
             st.write(safe_text)
 else:
     st.info("검색된 음반이 없습니다. 다른 키워드나 번호를 입력해 보세요.")
