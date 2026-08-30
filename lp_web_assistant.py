@@ -11,15 +11,41 @@ st.markdown("""
     .lp-card {
         background-color: #ffffff;
         border-radius: 12px;
-        padding: 18px 20px;
-        margin-bottom: 16px;
-        border-left: 6px solid #2563eb;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+        padding: 22px 24px;
+        margin-bottom: 20px;
+        border-left: 8px solid #2563eb;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     }
-    .lp-loc { font-size: 17px; font-weight: bold; color: #1e293b; }
-    .lp-loc span.loc-tag { color: #dc2626; }
-    .lp-meta { font-size: 13px; color: #64748b; margin: 4px 0 10px 0; }
-    .lp-ai-box { background-color: #f8fafc; border-radius: 8px; padding: 12px; margin-top: 8px; font-size: 13.5px; color: #334155; line-height: 1.6; }
+    /* 제목 및 위치 번호 글자 크기 확대 */
+    .lp-loc { font-size: 22px; font-weight: bold; color: #1e293b; line-height: 1.4; }
+    .lp-loc span.loc-tag { color: #dc2626; font-size: 22px; }
+    .lp-meta { font-size: 16px; color: #64748b; margin: 6px 0 14px 0; }
+    
+    /* AI 추천 해설 글자 크기 및 줄간격 대폭 확대 */
+    .lp-ai-box { 
+        background-color: #f1f5f9; 
+        border-radius: 10px; 
+        padding: 16px 18px; 
+        margin-top: 10px; 
+        font-size: 18.5px; 
+        color: #1e293b; 
+        line-height: 1.75; 
+        word-break: keep-all;
+    }
+    
+    /* 해설 원본 열기(접기/펼치기) 내부 글자 크기 확대 */
+    [data-testid="stExpander"] {
+        font-size: 18px !important;
+    }
+    .expander-content {
+        font-size: 18px !important;
+        line-height: 1.8 !important;
+        color: #1e293b !important;
+        background-color: #fdfdfd;
+        padding: 12px;
+        border-radius: 8px;
+        word-break: keep-all;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -89,7 +115,7 @@ if filtered:
                         loc = m.group(1)
                         break
 
-        # 2. 항목별 텍스트 추출
+        # 2. 텍스트 추출
         artist = ""
         title = ""
         for k, v in item.items():
@@ -118,14 +144,14 @@ if filtered:
             artist = parts[0].strip()
             title = parts[1].strip()
 
-        # 5. 본문 속 [앨범명] 또는 《앨범명》, <앨범명>을 최우선 앨범명으로 추출
+        # 5. 본문 속 [앨범명] 또는 《앨범명》, <앨범명> 추출
         body_title_match = re.search(r'(?:앨범\s*)?[\[《<]([^\]》>]+)[\]》>]', intro_clean)
         if body_title_match:
             title = body_title_match.group(1).strip()
 
-        ai_summary = intro_clean[:160] + "..." if len(intro_clean) > 160 else intro_clean
+        ai_summary = intro_clean[:180] + "..." if len(intro_clean) > 180 else intro_clean
 
-        # 6. 헤더 텍스트 조합: [위치: @번호] 앨범명 (가수명)
+        # 6. 헤더 텍스트 조합
         loc_badge = f"<span class='loc-tag'>[위치: @{loc}]</span> " if loc else ""
         
         if title:
@@ -152,6 +178,6 @@ if filtered:
         expander_title = f"📖 [위치: @{loc}] 해설 원본 열기" if loc else "📖 해설 원본 열기"
         with st.expander(expander_title):
             safe_text = str(intro_clean if intro_clean else raw_detail).replace("~", "～")
-            st.write(safe_text)
+            st.markdown(f'<div class="expander-content">{safe_text}</div>', unsafe_allow_html=True)
 else:
     st.info("검색된 음반이 없습니다. 다른 키워드나 번호를 입력해 보세요.")
