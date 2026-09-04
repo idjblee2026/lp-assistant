@@ -67,7 +67,7 @@ st.markdown("""
         .lp-ai-box { 
             padding: 20px 22px !important; 
             font-size: 24px !important; 
-            font-weight: 500 !important;
+            font-weight: 500 !important; 
             line-height: 1.85 !important; 
         }
         .lp-ai-box b { font-size: 25px !important; color: #1e3a8a !important; }
@@ -122,15 +122,39 @@ query = st.text_input("🔍 음반 제목, 아티스트, 번호(위치), 또는 
 
 if query:
     clean_query = query.lower().strip()
-    words = [w for w in re.split(r'[\s,./?~!@#]+', clean_query) if len(w) >= 2]
     
-    filtered = []
-    for item in lp_data:
-        item_text = " ".join([str(v).lower() for v in item.values() if v is not None])
-        if clean_query in item_text:
-            filtered.append(item)
-        elif words and any(w in item_text for w in words):
-            filtered.append(item)
+    # [정밀 개선] 사용자가 '@708' 형태로 입력했을 때 -> 선반 번호만 1:1 완벽 일치 검색
+    at_match = re.match(r'^@(\d+)$', clean_query)
+    if at_match:
+        target_num = at_match.group(1)
+        filtered = []
+        for item in lp_data:
+            full_text = " ".join([str(v) for v in item.values() if v is not None])
+            # 위치 번호 추출 확인
+            loc_match = re.search(r'위치\s*[:_]?\s*@?([0-9]+)', full_text)
+            item_loc = ""
+            if loc_match:
+                item_loc = loc_match.group(1)
+            else:
+                for k, v in item.items():
+                    if any(x in str(k) for x in ["위치", "loc", "번호"]):
+                        m = re.search(r'([0-9]+)', str(v))
+                        if m:
+                            item_loc = m.group(1)
+                            break
+            # 정확히 숫자 일치 시에만 추가
+            if item_loc and str(int(item_loc)) == str(int(target_num)):
+                filtered.append(item)
+    else:
+        # 일반 키워드 검색 및 상단 테마 버튼 동작 (기존 동작 100% 동일 유지)
+        words = [w for w in re.split(r'[\s,./?~!@#]+', clean_query) if len(w) >= 2]
+        filtered = []
+        for item in lp_data:
+            item_text = " ".join([str(v).lower() for v in item.values() if v is not None])
+            if clean_query in item_text:
+                filtered.append(item)
+            elif words and any(w in item_text for w in words):
+                filtered.append(item)
 else:
     filtered = lp_data
 
