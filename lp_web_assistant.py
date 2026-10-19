@@ -1,6 +1,7 @@
 import os
 import streamlit as st
 import pandas as pd
+import docx
 
 st.set_page_config(page_title="LP 비서", layout="wide")
 st.title("💿 LP 컬렉션 비서")
@@ -32,17 +33,15 @@ else:
 
 st.write(f"총 **{len(filtered)}**건")
 
-# 400여 개 워드 파일 목록 확보
 word_files = os.listdir(WORD_DIR) if os.path.exists(WORD_DIR) else []
 
 for idx, row in filtered.iterrows():
-    # 열 이름이 무엇이든 유연하게 값을 가져옴
     row_text_list = [str(val).strip() for val in row.values if pd.notna(val)]
     title_text = " - ".join(row_text_list[:3])
     
     st.markdown(f"### 🎵 {title_text}")
     
-    # 워드 문서 자동 매칭 (행의 텍스트가 파일명에 들어있는지 확인)
+    # 워드 문서 자동 매칭
     matched_doc = None
     for wf in word_files:
         if not wf.endswith('.docx') or wf.startswith('~$'):
@@ -57,16 +56,14 @@ for idx, row in filtered.iterrows():
     # 워드 원본 내용 화면에 바로 펼침
     if matched_doc and os.path.exists(matched_doc):
         try:
-            import docx
             doc = docx.Document(matched_doc)
             paras = [p.text for p in doc.paragraphs if p.text.strip()]
             if paras:
-                st.markdown("--- ")
+                st.markdown("---")
                 st.markdown("#### 📖 음반 해설 전문")
-                st.write("
-
-".join(paras))
+                for p in paras:
+                    st.write(p)
         except Exception:
             pass
             
-    st.markdown("--- ")
+    st.markdown("---")
