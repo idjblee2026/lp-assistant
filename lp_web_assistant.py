@@ -157,10 +157,28 @@ else:
             if doc_path and os.path.exists(doc_path):
                 if os.path.exists(doc_path):
                     with open(doc_path, "rb") as fp:
-                        st.download_button(
-                            label="📥 워드 원본 문서 다운로드",
-                            data=fp,
-                            file_name=os.path.basename(doc_path),
+                        import docx
+                        try:
+                            doc = docx.Document(doc_path)
+                            full_text = [p.text for p in doc.paragraphs if p.text.strip()]
+                            st.markdown("--- ")
+                            st.markdown("### 📖 음반 해설 전문")
+                            st.write("
+
+".join(full_text))
+                        except Exception as e:
+                            pass
+                            import docx
+                            try:
+                                doc = docx.Document(doc_path)
+                                full_text = [p.text for p in doc.paragraphs if p.text.strip()]
+                                st.markdown("--- ")
+                                st.markdown("### 📖 음반 해설 전문")
+                                st.write("
+
+".join(full_text))
+                            except Exception as e:
+                                pass
                             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                             key=f"dl_{idx}_{location}"
                         )
