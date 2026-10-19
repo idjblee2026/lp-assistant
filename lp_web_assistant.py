@@ -1,12 +1,10 @@
 import os
 import streamlit as st
 import pandas as pd
-import docx
 
-st.set_page_config(page_title="동암 LP 비서", layout="wide")
-st.title("동암 LP 컬렉션 비서")
+st.set_page_config(page_title="LP 비서", layout="wide")
+st.title("💿 LP 컬렉션 비서")
 
-# 엑셀 데이터 로드
 EXCEL_FILE = "lp_list.xlsx"
 WORD_DIR = "word_reports"
 
@@ -18,43 +16,57 @@ if not os.path.exists(EXCEL_FILE):
 def load_data():
     return pd.read_excel(EXCEL_FILE)
 
-df = load_data()
+try:
+    df = load_data()
+except Exception as e:
+    st.error(f"엑셀 로딩 실패: {e}")
+    st.stop()
 
 # 검색창
-search_query = st.text_input("🔍 검색 (가수, 곡명, 번호 등)", "").strip()
+search_query = st.text_input("🔍 검색어 입력 (번호, 가수, 곡명 등)", "").strip()
 
 if search_query:
     filtered = df[df.apply(lambda row: row.astype(str).str.contains(search_query, case=False).any(), axis=1)]
 else:
     filtered = df
 
-st.write(f"총 **{len(filtered)}**건이 검색되었습니다.")
+st.write(f"총 **{len(filtered)}**건")
 
-# 검색 결과 목록 표시
+# 400여 개 워드 파일 목록 확보
+word_files = os.listdir(WORD_DIR) if os.path.exists(WORD_DIR) else []
+
 for idx, row in filtered.iterrows():
-    loc = str(row.get('위치', '')).strip()
-    artist = str(row.get('가수', row.get('아티스트', ''))).strip()
-    album = str(row.get('앨범', row.get('음반명', ''))).strip()
+    # 열 이름이 무엇이든 유연하게 값을 가져옴
+    row_text_list = [str(val).strip() for val in row.values if pd.notna(val)]
+    title_text = " - ".join(row_text_list[:3])
     
-    st.markdown(f"### 💿 {album} - {artist}")
-    st.caption(f"위치: {loc} | 인덱스: {idx}")
+    st.markdown(f"### 🎵 {title_text}")
     
-    # 워드 문서 자동 매칭 및 전문 직접 표시
-    doc_file = None
-    if os.path.exists(WORD_DIR):
-        for f in os.listdir(WORD_DIR):
-            if f.endswith('.docx') and (loc in f or (album and album in f)):
-                doc_file = os.path.join(WORD_DIR, f)
+    # 워드 문서 자동 매칭 (행의 텍스트가 파일명에 들어있는지 확인)
+    matched_doc = None
+    for wf in word_files:
+        if not wf.endswith('.docx') or wf.startswith('~$'):
+            continue
+        for val in row_text_list:
+            if len(val) >= 2 and val in wf:
+                matched_doc = os.path.join(WORD_DIR, wf)
                 break
-                
-    if doc_file and os.path.exists(doc_file):
+        if matched_doc:
+            break
+            
+    # 워드 원본 내용 화면에 바로 펼침
+    if matched_doc and os.path.exists(matched_doc):
         try:
-            doc = docx.Document(doc_file)
-            full_text = [p.text for p in doc.paragraphs if p.text.strip()]
-            st.markdown("#### 📖 음반 해설 전문")
-            st.write("
+            import docx
+            doc = docx.Document(matched_doc)
+            paras = [p.text for p in doc.paragraphs if p.text.strip()]
+            if paras:
+                st.markdown("--- ")
+                st.markdown("#### 📖 음반 해설 전문")
+                st.write("
 
-".join(full_text))
-        except Exception as e:
-            st.info("해설 문서를 불러오는 중입니다...")
-    st.markdown("---")
+".join(paras))
+        except Exception:
+            pass
+            
+    st.markdown("--- ")
