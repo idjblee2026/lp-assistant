@@ -155,8 +155,15 @@ else:
         # 해설 바로 출력
         if True: # f"📖 [위치: {location}] 해설 열기"):
             if doc_path and os.path.exists(doc_path):
-                if st.button(f"📄 워드 원본 문서 직접 열기", key=f"btn_{idx}_{location}"):
-                    pass
+                if os.path.exists(doc_path):
+                    with open(doc_path, "rb") as fp:
+                        st.download_button(
+                            label="📥 워드 원본 문서 다운로드",
+                            data=fp,
+                            file_name=os.path.basename(doc_path),
+                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                            key=f"dl_{idx}_{location}"
+                        )
 
             if clean_content and clean_content != "nan":
                 st.write(clean_content)
