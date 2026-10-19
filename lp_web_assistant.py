@@ -156,7 +156,7 @@ else:
         if True: # f"📖 [위치: {location}] 해설 열기"):
             if doc_path and os.path.exists(doc_path):
                 if st.button(f"📄 워드 원본 문서 직접 열기", key=f"btn_{idx}_{location}"):
-                    os.startfile(doc_path)
+                    pass
 
             if clean_content and clean_content != "nan":
                 st.write(clean_content)
