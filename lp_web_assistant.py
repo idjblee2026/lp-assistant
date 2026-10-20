@@ -1,10 +1,11 @@
 import os
+import urllib.parse
 import streamlit as st
 import pandas as pd
 import docx
 
 st.set_page_config(page_title="LP 비서", layout="wide")
-st.title("💿 LP 컬렉션 비서")
+st.title("동암 LP 컬렉션 비서 (음악 감상실)")
 
 EXCEL_FILE = "lp_list.xlsx"
 WORD_DIR = "word_reports"
@@ -24,7 +25,7 @@ except Exception as e:
     st.stop()
 
 # 검색창
-search_query = st.text_input("🔍 검색어 입력 (번호, 가수, 곡명 등)", "").strip()
+search_query = st.text_input("검색어 입력 (번호, 가수, 곡명 등)", "").strip()
 
 if search_query:
     filtered = df[df.apply(lambda row: row.astype(str).str.contains(search_query, case=False).any(), axis=1)]
@@ -36,22 +37,34 @@ st.write(f"총 **{len(filtered)}**건")
 word_files = [f for f in os.listdir(WORD_DIR) if f.endswith('.docx') and not f.startswith('~$')] if os.path.exists(WORD_DIR) else []
 
 for idx, row in filtered.iterrows():
-    # 엑셀 행의 주요 정보 추출
     row_dict = {str(k).strip(): str(v).strip() for k, v in row.items() if pd.notna(v)}
     
-    # 대표 필드 값 찾기
     loc = row_dict.get('위치', row_dict.get('번호', ''))
-    artist = row_dict.get('가수', row_dict.get('아티스트', ''))
-    album = row_dict.get('앨범', row_dict.get('음반명', ''))
+    artist = row_dict.get('가수', row_dict.get('Artists', row_dict.get('아티스트', '')))
+    album = row_dict.get('앨범', row_dict.get('앨범명', ''))
     
     title_display = f"{album} - {artist}" if album and artist else " - ".join(list(row_dict.values())[:3])
-    st.markdown(f"### 🎵 {title_display}")
+    st.markdown(f"### [음반] {title_display}")
     
     # 기본 정보 안내
     info_details = " | ".join([f"**{k}**: {v}" for k, v in row_dict.items() if k not in ['해설', '비고']])
     st.markdown(info_details)
     
-    # 정확한 워드 파일 매칭: [위치] 또는 [앨범명] 기준
+    # 유튜브 맞춤 검색 링크 (가수명 + 앨범명)
+    clean_search = f"{artist} {album}".strip() if (artist or album) else title_display
+    yt_query = urllib.parse.quote_plus(clean_search)
+    yt_url = f"https://www.youtube.com/results?search_query={yt_query}"
+    
+    st.markdown(
+        f'''<a href="{yt_url}" target="_blank" style="text-decoration:none;">
+            <button style="background-color:#FF0000; color:white; border:none; padding:8px 16px; border-radius:6px; font-weight:bold; cursor:pointer; margin-top:5px; margin-bottom:12px;">
+                [▶] YouTube에서 음악 듣기
+            </button>
+        </a>''',
+        unsafe_allow_html=True
+    )
+    
+    # 정확한 워드 파일 매칭
     matched_doc = None
     if loc:
         for wf in word_files:
@@ -65,14 +78,14 @@ for idx, row in filtered.iterrows():
                 matched_doc = os.path.join(WORD_DIR, wf)
                 break
 
-    # 워드 문서 내용 표시
+    # 워드 해설 전문 화면 표시
     if matched_doc and os.path.exists(matched_doc):
         try:
             doc = docx.Document(matched_doc)
             paras = [p.text for p in doc.paragraphs if p.text.strip()]
             if paras:
                 st.markdown("---")
-                st.markdown("#### 📖 음반 해설 전문")
+                st.markdown("#### 음반 해설 전문")
                 for p in paras:
                     st.write(p)
         except Exception:
