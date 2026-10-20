@@ -68,7 +68,8 @@ def generate_lp_content(location, artist, album):
 
 (마지막 줄은 "이 음반을 통해 ~ 전해주는 감동을 다시 한번 경험해 보시는 것은 어떨까요?" 형태의 따뜻한 권유형 문장 한 줄로 마무리)
 """
-    for model_name in ['gemini-2.5-pro', 'gemini-1.5-flash']:
+    # 시스템 에러 메시지에서 명시적으로 요구한 지원 모델명 적용
+    for model_name in ['gemini-3.8-flash', 'models/gemini-3.8-flash']:
         try:
             response = client.models.generate_content(
                 model=model_name,
@@ -76,7 +77,8 @@ def generate_lp_content(location, artist, album):
             )
             if response and response.text:
                 return response.text.strip()
-        except Exception:
+        except Exception as e:
+            print(f"   ⚠️ [{model_name}] 호출 오류: {e}")
             continue
     return ""
 
@@ -105,10 +107,7 @@ def save_word_doc(location, artist, album, ai_text, target_filepath):
 
     for line in lines[1:]:
         clean_line = line.replace("#", "").strip()
-        if not clean_line:
-            continue
-
-        if clean_line == first_line or clean_line.startswith("위치 :"):
+        if not clean_line or clean_line == first_line or clean_line.startswith("위치 :"):
             continue
 
         p = doc.add_paragraph()
@@ -153,7 +152,7 @@ def save_word_doc(location, artist, album, ai_text, target_filepath):
                 set_font(r_body, size_pt=10.5)
 
     doc.save(target_filepath)
-    print(f"✨ 품격 있는 워드 해설 생성 완료: {os.path.basename(target_filepath)}")
+    print(f"   ✨ [문서 저장 성공] -> {os.path.basename(target_filepath)}")
 
 def main():
     print("=" * 65)
@@ -172,23 +171,12 @@ def main():
         input("엔터를 누르면 종료됩니다...")
         return
 
-    col_loc = next((c for c in df.columns if str(c).strip() == "위치"), None)
-    if not col_loc:
-        col_loc = next((c for c in df.columns if "위치" in str(c)), df.columns[1])
-
-    col_art = next((c for c in df.columns if str(c).strip().lower() in ["artists", "artist", "아티스트", "가수"]), None)
-    if not col_art:
-        col_art = df.columns[2]
-
-    col_alb = next((c for c in df.columns if str(c).strip().lower() in ["앨범명", "앨범", "음반명", "album", "title"]), None)
-    if not col_alb:
-        col_alb = df.columns[3]
+    col_loc = next((c for c in df.columns if str(c).strip() == "위치"), None) or df.columns[1]
+    col_art = next((c for c in df.columns if str(c).strip().lower() in ["artists", "artist", "아티스트", "가수"]), None) or df.columns[2]
+    col_alb = next((c for c in df.columns if str(c).strip().lower() in ["앨범명", "앨범", "음반명", "album", "title"]), None) or df.columns[3]
 
     existing_files = os.listdir(WORD_DIR)
     targets = []
-
-    print(f"매칭 기준 확인: [위치: {col_loc}] | [아티스트: {col_art}] | [앨범명: {col_alb}]")
-    print("해설 리포트 필요 여부 점검 중...")
 
     for _, row in df.iterrows():
         loc = str(row[col_loc]).strip().replace(".0", "")
@@ -225,13 +213,15 @@ def main():
         if need_update:
             targets.append((loc, art, alb, target_path))
 
-    print(f"\n👉 새 양식으로 리포트를 작성할 음반: 총 {len(targets)}개\n")
+    print(f"👉 리포트를 작성할 음반: 총 {len(targets)}개\n")
 
     for i, (loc, art, alb, target_path) in enumerate(targets, 1):
         print(f"[{i}/{len(targets)}] 🔍 정통 해설 작성 중 -> [{loc}] {art} - {alb}")
         ai_res = generate_lp_content(loc, art, alb)
         if ai_res:
             save_word_doc(loc, art, alb, ai_res, target_path)
+        else:
+            print("   ❌ AI 내용 생성 실패")
         time.sleep(1.2)
 
     cache_file = os.path.join(BASE_DIR, "lp_database.json")
